@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📰 NEWS CLAW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f1a;
+    --card-bg: #1a1a2e;
+    --text: #e8e8e8;
+    --text-dim: #8888aa;
+    --accent: #ffd700;
+  }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 50% -10%, rgba(30, 30, 80, 0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 20% 80%, rgba(20, 20, 50, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(20, 20, 50, 0.4) 0%, transparent 50%);
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ─── TOP BAR ─── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    gap: 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .game-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(255,215,0,0.3);
+    white-space: nowrap;
+  }
+
+  .back-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--text-dim);
+    color: var(--text-dim);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .back-btn:hover {
+    border-color: var(--text);
+    color: var(--text);
+    transform: translateX(-3px);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     CATEGORY SELECT SCREEN
+  ═══════════════════════════════════════════════════════ */
+  #selectScreen {
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    gap: 0;
+  }
+
+  .select-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(255,215,0,0.25);
+    letter-spacing: 3px;
+  }
+
+  .select-subtitle {
+    font-size: clamp(0.8rem, 2.5vw, 1rem);
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 720px;
+  }
+
+  .cat-card {
+    background: var(--card-bg);
+    border: 2px solid;
+    border-radius: 14px;
+    padding: 24px 16px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .cat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .cat-card-emoji {
+    font-size: 2.8rem;
+    line-height: 1;
+    display: block;
+  }
+
+  .cat-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .cat-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .cat-card:hover {
+    transform: translateY(-8px) scale(1.04);
+  }
+
+  @keyframes catCardEntrance {
+    from { opacity: 0; transform: translateY(40px) scale(0.9); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     MAIN GAME SCREEN
+  ═══════════════════════════════════════════════════════ */
+
+  /* ─── CATEGORY HEADER ─── */
+  .cat-header {
+    text-align: center;
+    padding: 10px 16px 6px;
+    flex-shrink: 0;
+  }
+
+  .cat-header-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .cat-header-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* ─── ARTICLES READ COUNTER ─── */
+  .counter-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px 4px;
+    flex-shrink: 0;
+  }
+
+  .articles-read-counter {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+  }
+
+  .articles-read-counter span {
+    font-size: 1.2em;
+    margin-right: 4px;
+  }
+
+  /* ─── MAIN AREA ─── */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 8px 16px 0;
+    gap: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── DIALOGUE BOX ─── */
+  .dialogue-box {
+    width: 100%;
+    max-width: 560px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    flex-shrink: 0;
+    min-height: 140px;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.4);
+    transition: opacity 0.3s ease;
+  }
+
+  .dialogue-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .dialogue-source {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dialogue-source a {
+    color: var(--accent);
+    text-decoration: none;
+    opacity: 0.9;
+  }
+
+  .dialogue-source a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .dialogue-time { opacity: 0.5; }
+
+  .dialogue-text {
+    font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+    line-height: 1.75;
+    color: var(--text);
+  }
+
+  .dialogue-text .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .dialogue-placeholder {
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 1rem;
+    padding: 30px 0;
+    opacity: 0.7;
+  }
+
+  /* Cards dimmed when summary is showing */
+  .hand-area.dimmed .cards .card {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .hand-area.dimmed .hand-label {
+    opacity: 0.25;
+  }
+
+  /* ─── CARD HAND ─── */
+  .hand-area {
+    flex-shrink: 0;
+    padding: 14px 10px 28px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.65) 0%, transparent 80%);
+    width: 100%;
+    transition: opacity 0.3s ease;
+    position: relative;
+    z-index: 5;
+  }
+
+  .hand-label {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+  }
+
+  .cards {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 2px solid;
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: 170px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.3s ease;
+    opacity: 0;
+    transform: translateX(70px);
+    flex-shrink: 0;
+    z-index: 1;
+    pointer-events: auto;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .card-headline {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.35;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card:hover {
+    transform: translateY(-7px) scale(1.06);
+    z-index: 5;
+  }
+
+  /* Card entrance animation */
+  .card.dealt {
+    animation: dealCard 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes dealCard {
+    from { opacity: 0; transform: translateX(70px) scale(0.82) rotate(3deg); }
+    to   { opacity: 1; transform: translateX(0)   scale(1)    rotate(0deg); }
+  }
+
+  /* Card fly-to-center on click */
+  .card.flying {
+    animation: flyCenter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    z-index: 50 !important;
+    pointer-events: none !important;
+  }
+
+  @keyframes flyCenter {
+    0%   { transform: scale(1);    opacity: 1; }
+    50%  { transform: scale(1.35); opacity: 1; }
+    100% { transform: scale(0);    opacity: 0; }
+  }
+
+  /* Dissolve ring effect */
+  .dissolve-ring {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 200;
+    animation: dissolveRing 0.7s ease-out forwards;
+  }
+
+  @keyframes dissolveRing {
+    0%   { transform: scale(0); opacity: 0.8; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  /* Dialogue fade */
+  .dialogue-box.fade-out {
+    animation: fadeDialogueOut 0.3s ease forwards;
+  }
+  .dialogue-box.fade-in {
+    animation: fadeDialogueIn 0.4s ease forwards;
+  }
+
+  @keyframes fadeDialogueOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-6px); }
+  }
+  @keyframes fadeDialogueIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Loading shimmer on cards */
+  .card.loading {
+    animation: shimmer 1.2s ease infinite;
+  }
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     END SCREEN
+  ═══════════════════════════════════════════════════════ */
+  .end-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 20, 0.97);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    text-align: center;
+    padding: 32px 24px;
+    gap: 20px;
+    animation: fadeInEnd 0.5s ease forwards;
+  }
+
+  .end-screen.visible {
+    display: flex;
+  }
+
+  @keyframes fadeInEnd {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .end-emoji {
+    font-size: 5rem;
+    animation: endPop 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes endPop {
+    from { transform: scale(0) rotate(-20deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+  }
+
+  .end-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(255,215,0,0.5);
+    letter-spacing: 3px;
+    animation: endSlide 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  .end-subtitle {
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    color: var(--text-dim);
+    max-width: 400px;
+    line-height: 1.6;
+    animation: endSlide 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  .end-subtitle strong {
+    color: var(--text);
+  }
+
+  .end-count {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    animation: endSlide 0.5s 0.45s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  @keyframes endSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .end-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    border-radius: 30px;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    animation: endSlide 0.5s 0.55s cubic-bezier(0.22,1,0.36,1) both;
+    margin-top: 8px;
+  }
+
+  .end-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 30px rgba(255,215,0,0.4);
+    transform: scale(1.04);
+  }
+
+  /* Mobile */
+  @media (max-width: 700px) {
+    .category-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .card {
+      width: 148px;
+      padding: 12px 13px;
+    }
+    .cards { gap: 8px; }
+    .dialogue-box { padding: 16px 18px; max-height: 180px; }
+    .top-bar { padding: 12px 16px; }
+    .game-title { font-size: 1.1rem; letter-spacing: 2px; }
+    .cat-card { padding: 20px 14px; }
+    .cat-card-emoji { font-size: 2.4rem; }
+    .cat-card-name { font-size: 0.85rem; }
+  }
+
+  @media (max-width: 480px) {
+    .card {
+      width: 100%;
+      max-width: 280px;
+    }
+    .cards { flex-direction: column; align-items: center; }
+    .category-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+  }
+
+  /* Scrollbar styling */
+  .dialogue-box::-webkit-scrollbar { width: 4px; }
+  .dialogue-box::-webkit-scrollbar-track { background: transparent; }
+  .dialogue-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR (shown on both screens) -->
+<div class="top-bar">
+  <div class="game-title">📰 NEWS CLAW</div>
+  <button class="back-btn" id="backBtn" style="display:none;">← Browse Another Category</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCREEN 1: CATEGORY SELECT
+═══════════════════════════════════════════════════════ -->
+<div class="screen active" id="selectScreen">
+  <div class="select-title">Choose Your Quest</div>
+  <div class="select-subtitle">Pick a category to begin your news adventure</div>
+  <div class="category-grid" id="categoryGrid"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCREEN 2: MAIN GAME
+═══════════════════════════════════════════════════════ -->
+<div class="screen" id="mainScreen">
+
+  <!-- Category name in header -->
+  <div class="cat-header">
+    <div class="cat-header-label">Currently Reading</div>
+    <div class="cat-header-name" id="catHeaderName"></div>
+  </div>
+
+  <!-- Articles Read Counter -->
+  <div class="counter-container">
+    <div class="articles-read-counter">
+      <span>📰</span> Articles Read: <span id="articlesReadCount">0</span>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+
+    <!-- DIALOGUE BOX -->
+    <div class="dialogue-box" id="dialogueBox">
+      <div class="dialogue-placeholder" id="dialoguePlaceholder">
+        Pick a card to read the latest news...
+      </div>
+      <div id="dialogueContent" style="display:none;">
+        <div class="dialogue-source" id="dialogueSource"></div>
+        <div class="dialogue-text" id="dialogueText"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CARD HAND -->
+  <div class="hand-area" id="handArea">
+    <div class="hand-label">— CHOOSE YOUR CARD —</div>
+    <div class="cards" id="cards"></div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     END SCREEN OVERLAY
+═══════════════════════════════════════════════════════ -->
+<div class="end-screen" id="endScreen">
+  <div class="end-emoji">🎉</div>
+  <div class="end-title">NEWS CLAW COMPLETE!</div>
+  <div class="end-subtitle" id="endSubtitle"></div>
+  <div class="end-count" id="endCount"></div>
+  <button class="end-btn" id="endBtn">← Browse Another Category</button>
+</div>
+
+<script>
+// ─── API CONFIG ───────────────────────────────────────────────────────────────
+// Detect environment: local dev server vs Vercel/production
+const IS_LOCAL = window.location.hostname === 'localhost' && window.location.port === '3457';
+const API_BASE = IS_LOCAL ? 'http://localhost:3457' : '';
+// Local Express uses /api/news/:catId; Vercel proxy uses /api/news?category=:catId
+const NEWS_ENDPOINT = IS_LOCAL ? `${API_BASE}/api/news` : `${API_BASE}/api/news`;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let articlesRead = 0;
+let selectedCategory = null;
+let currentCategoryId = null;
+let currentCategoryName = null;
+let newsPool = [];       // all fetched articles (the pool)
+let poolIndex = 0;       // next unread article index in newsPool
+let shownCards = [];     // currently displayed card article objects (up to 3)
+let isAnimating = false;
+let allReadTriggered = false; // guard against double-triggering end screen
+
+const CATEGORY_COLORS = {
+  1: '#00d4ff', // Tech
+  2: '#ff6b6b', // World
+  3: '#ffd700', // Business
+  4: '#2ecc71', // Sports
+  5: '#9b59b6', // Science
+  6: '#e91e63', // Entertainment
+};
+
+const CATEGORY_DESCS = {
+  1: 'AI breakthroughs, gadgets, and the future of tech',
+  2: 'Global events shaping our world today',
+  3: 'Markets, companies, and the economy',
+  4: 'Scores, trades, and athletic triumphs',
+  5: 'Discoveries, medicine, and the cosmos',
+  6: 'Movies, TV, music, and celebrity news',
+};
+
+// ─── SCREEN MANAGEMENT ────────────────────────────────────────────────────────
+function showSelectScreen() {
+  document.getElementById('selectScreen').classList.add('active');
+  document.getElementById('mainScreen').classList.remove('active');
+  document.getElementById('backBtn').style.display = 'none';
+  hideEndScreen();
+}
+
+function showMainScreen(catId) {
+  document.getElementById('selectScreen').classList.remove('active');
+  document.getElementById('mainScreen').classList.add('active');
+  document.getElementById('backBtn').style.display = '';
+  document.getElementById('backBtn').style.borderColor = CATEGORY_COLORS[catId];
+  document.getElementById('backBtn').style.color = CATEGORY_COLORS[catId];
+  hideEndScreen();
+}
+
+function hideEndScreen() {
+  document.getElementById('endScreen').classList.remove('visible');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await loadCategories();
+}
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+async function loadCategories() {
+  const res = await fetch('/api/categories');
+  const cats = await res.json();
+  const gridEl = document.getElementById('categoryGrid');
+  gridEl.innerHTML = '';
+
+  cats.forEach((cat, i) => {
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.style.borderColor = cat.color;
+    card.style.boxShadow = `0 0 18px ${cat.color}33`;
+    card.style.animation = `catCardEntrance 0.5s cubic-bezier(0.22,1,0.36,1) forwards`;
+    card.style.animationDelay = `${i * 80 + 100}ms`;
+    card.style.opacity = '0';
+
+    card.innerHTML = `
+      <span class="cat-card-emoji">${cat.emoji}</span>
+      <span class="cat-card-name">${cat.name}</span>
+      <span class="cat-card-desc">${CATEGORY_DESCS[cat.id]}</span>
+    `;
+
+    card.addEventListener('click', () => enterCategory(cat.id, cat.name, cat.color));
+    gridEl.appendChild(card);
+  });
+}
+
+async function enterCategory(catId, catName, catColor) {
+  // Reset state
+  articlesRead = 0;
+  currentCategoryId = catId;
+  currentCategoryName = catName;
+  selectedCategory = catId;
+  newsPool = [];
+  poolIndex = 0;
+  shownCards = [];
+  isAnimating = false;
+  allReadTriggered = false;
+
+  // Update counter
+  document.getElementById('articlesReadCount').textContent = '0';
+
+  // Update category header
+  const headerName = document.getElementById('catHeaderName');
+  headerName.textContent = catName;
+  headerName.style.color = catColor;
+
+  // Clear cards and dialogue
+  document.getElementById('cards').innerHTML = '';
+  clearDialogue();
+  document.getElementById('handArea').classList.remove('dimmed');
+
+  // Switch screen
+  showMainScreen(catId);
+
+  // Fetch news
+  try {
+    const newsUrl = IS_LOCAL
+      ? `${API_BASE}/api/news/${catId}`
+      : `${API_BASE}/api/news?category=${catId}`;
+    const res = await fetch(newsUrl);
+    newsPool = await res.json();
+    poolIndex = 0;
+  } catch(e) {
+    console.error('Failed to load news', e);
+    return;
+  }
+
+  showNextCards();
+}
+
+// ─── BACK BUTTON ──────────────────────────────────────────────────────────────
+document.getElementById('backBtn').addEventListener('click', () => {
+  if (isAnimating) return;
+  resetAndGoToSelect();
+});
+
+document.getElementById('endBtn').addEventListener('click', () => {
+  resetAndGoToSelect();
+});
+
+function resetAndGoToSelect() {
+  articlesRead = 0;
+  selectedCategory = null;
+  currentCategoryId = null;
+  currentCategoryName = null;
+  newsPool = [];
+  poolIndex = 0;
+  shownCards = [];
+  isAnimating = false;
+  allReadTriggered = false;
+  clearDialogue();
+  hideEndScreen();
+  showSelectScreen();
+  // Re-trigger cat card animations on return
+  document.querySelectorAll('.cat-card').forEach((card, i) => {
+    card.style.animation = 'none';
+    card.offsetHeight; // reflow
+    card.style.animation = `catCardEntrance 0.5s cubic-bezier(0.22,1,0.36,1) forwards`;
+    card.style.animationDelay = `${i * 80}ms`;
+  });
+}
+
+// ─── CARDS ────────────────────────────────────────────────────────────────────
+function showNextCards() {
+  if (allReadTriggered) return;
+
+  // Initialize shownCards from pool: first up to 3 unread articles
+  if (shownCards.length === 0 && poolIndex < newsPool.length) {
+    shownCards = newsPool.slice(poolIndex, poolIndex + 3);
+  }
+
+  if (shownCards.length === 0) return;
+
+  const cardsEl = document.getElementById('cards');
+  // Only render if cards container is empty (avoid wiping on replenishment)
+  if (cardsEl.children.length === 0) {
+    renderShownCards();
+  }
+}
+
+function renderShownCards() {
+  if (allReadTriggered) return;
+
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = '';
+  const color = CATEGORY_COLORS[currentCategoryId];
+
+  shownCards.forEach((article, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.borderColor = color;
+    card.style.boxShadow = `0 0 12px ${color}22`;
+    card.style.animationDelay = `${i * 130 + 100}ms`;
+    card.style.zIndex = 1 + i;
+
+    card.innerHTML = `
+      <div class="card-headline">${article.headline}</div>
+      <div class="card-meta">
+        <span>${article.source}</span>
+        <span>${article.time}</span>
+      </div>
+    `;
+
+    card.onclick = () => handleCardClick(card, article);
+    cardsEl.appendChild(card);
+
+    requestAnimationFrame(() => card.classList.add('dealt'));
+  });
+
+  isAnimating = false;
+}
+
+function handleCardClick(cardEl, article) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  const color = CATEGORY_COLORS[currentCategoryId];
+  const rect = cardEl.getBoundingClientRect();
+
+  // Dim OTHER cards immediately (they stay visible, just dimmed)
+  document.querySelectorAll('.card').forEach(c => {
+    if (c !== cardEl) {
+      c.style.transition = 'opacity 0.2s';
+      c.style.opacity = '0.15';
+    }
+  });
+
+  // Dim the hand area label
+  document.getElementById('handArea').classList.add('dimmed');
+
+  // Fly this card to center
+  cardEl.classList.add('flying');
+
+  setTimeout(() => {
+    // Dissolve ring
+    const ring = document.createElement('div');
+    ring.className = 'dissolve-ring';
+    ring.style.left = (rect.left + rect.width / 2  - 40) + 'px';
+    ring.style.top  = (rect.top  + rect.height / 2 - 40) + 'px';
+    ring.style.width  = '80px';
+    ring.style.height = '80px';
+    ring.style.border = `3px solid ${color}`;
+    ring.style.boxShadow = `0 0 25px ${color}`;
+    document.body.appendChild(ring);
+    setTimeout(() => ring.remove(), 700);
+
+    // Show summary
+    showSummary(article);
+
+    // Increment counter
+    articlesRead++;
+    document.getElementById('articlesReadCount').textContent = articlesRead;
+
+    // Remove picked card from shownCards and advance pool
+    shownCards = shownCards.filter(a => a !== article);
+    poolIndex++;
+
+    // Check end condition: no more cards shown AND no more articles in pool
+    if (shownCards.length === 0 && poolIndex >= newsPool.length) {
+      setTimeout(() => {
+        showEndScreen();
+        // isAnimating stays true until reset on next screen transition
+      }, 1200);
+    } else {
+      // Replenish: add next article from pool if we have fewer than 3 cards
+      setTimeout(() => {
+        if (!allReadTriggered) {
+          replenishCards();
+        }
+      }, 1200);
+    }
+  }, 480);
+}
+
+function replenishCards() {
+  if (allReadTriggered) return;
+  isAnimating = true; // lock during replenishment to prevent double-click
+
+  const cardsEl = document.getElementById('cards');
+  const color = CATEGORY_COLORS[currentCategoryId];
+
+  // Restore opacity on remaining cards
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.opacity = '';
+  });
+
+  // Add new cards until we have 3 or run out of pool
+  while (shownCards.length < 3 && poolIndex < newsPool.length) {
+    const newArticle = newsPool[poolIndex];
+    shownCards.push(newArticle);
+    poolIndex++;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.borderColor = color;
+    card.style.boxShadow = `0 0 12px ${color}22`;
+    card.style.zIndex = 1 + shownCards.length;
+
+    card.innerHTML = `
+      <div class="card-headline">${newArticle.headline}</div>
+      <div class="card-meta">
+        <span>${newArticle.source}</span>
+        <span>${newArticle.time}</span>
+      </div>
+    `;
+
+    card.onclick = () => handleCardClick(card, newArticle);
+    cardsEl.appendChild(card);
+
+    requestAnimationFrame(() => card.classList.add('dealt'));
+  }
+
+  // If no cards left to show, clear the hand area label
+  if (shownCards.length === 0) {
+    cardsEl.innerHTML = '';
+  }
+
+  isAnimating = false;
+}
+
+// ─── END SCREEN ───────────────────────────────────────────────────────────────
+function showEndScreen() {
+  allReadTriggered = true;
+
+  const endScreen = document.getElementById('endScreen');
+  const subtitle = document.getElementById('endSubtitle');
+  const count = document.getElementById('endCount');
+
+  subtitle.innerHTML = `You've read all articles in <strong>${currentCategoryName}</strong>.<br>Check back in 8 hours for the latest news.`;
+  count.textContent = `📰 Total articles read: ${articlesRead}`;
+
+  endScreen.classList.add('visible');
+}
+
+// ─── DIALOGUE ─────────────────────────────────────────────────────────────────
+async function showSummary(article) {
+  const dialogueBox = document.getElementById('dialogueBox');
+  const placeholder = document.getElementById('dialoguePlaceholder');
+  const content = document.getElementById('dialogueContent');
+  const sourceEl = document.getElementById('dialogueSource');
+  const textEl = document.getElementById('dialogueText');
+
+  // Fade out
+  dialogueBox.classList.add('fade-out');
+  await sleep(280);
+
+  placeholder.style.display = 'none';
+  content.style.display = 'block';
+
+  const color = CATEGORY_COLORS[currentCategoryId];
+  const articleUrl = article.url || `https://example.com/${article.id}`;
+  sourceEl.innerHTML = `
+    <span style="color: ${color}">${article.source}</span>
+    &nbsp;·&nbsp; <span class="dialogue-time">${article.time}</span>
+    &nbsp;·&nbsp; <a href="${articleUrl}" target="_blank" rel="noopener">Read Full Article →</a>
+  `;
+
+  // Fade in
+  dialogueBox.classList.remove('fade-out');
+  dialogueBox.classList.add('fade-in');
+
+  let summaryData;
+
+  // Brave API embeds summary in article.summary; mock data fetches from /api/summary/:id
+  if (article.summary) {
+    summaryData = { summary: article.summary };
+  } else {
+    try {
+      const res = await fetch(`${API_BASE}/api/summary/${article.id}`);
+      summaryData = await res.json();
+    } catch(e) {
+      textEl.innerHTML = '<em>Failed to load summary. Click a card to try again.</em>';
+      dialogueBox.classList.remove('fade-in');
+      isAnimating = false;
+      return;
+    }
+  }
+
+  await typewriterEffect(textEl, summaryData.summary);
+
+  await sleep(100);
+  dialogueBox.classList.remove('fade-in');
+}
+
+async function typewriterEffect(el, text) {
+  el.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+
+  const segments = text.split('\n');
+
+  for (let s = 0; s < segments.length; s++) {
+    const chars = segments[s].split('');
+    for (let i = 0; i < chars.length; i++) {
+      el.insertBefore(document.createTextNode(chars[i]), cursor);
+      await sleep(14 + Math.random() * 8);
+    }
+    if (s < segments.length - 1) {
+      el.insertBefore(document.createElement('br'), cursor);
+      el.insertBefore(document.createElement('br'), cursor);
+      await sleep(60);
+    }
+  }
+
+  await sleep(600);
+  cursor.remove();
+}
+
+function clearDialogue() {
+  const placeholder = document.getElementById('dialoguePlaceholder');
+  const content = document.getElementById('dialogueContent');
+  const dialogueBox = document.getElementById('dialogueBox');
+  const textEl = document.getElementById('dialogueText');
+
+  placeholder.style.display = '';
+  content.style.display = 'none';
+  textEl.innerHTML = '';
+  dialogueBox.classList.remove('fade-in', 'fade-out');
+
+  // Restore card opacities
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.opacity = '';
+  });
+  document.getElementById('handArea').classList.remove('dimmed');
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

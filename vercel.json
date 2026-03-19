@@ -1,5 +1,13 @@
 {
   "rewrites": [
     { "source": "/api/news", "destination": "/api/news" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
   ]
 }

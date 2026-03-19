@@ -1,7 +1,5 @@
 // Using global fetch (Node 18+ built-in)
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
-
 module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,98 +11,60 @@ module.exports = async (req, res) => {
   }
 
   const { category } = req.query;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.BRAVE_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({
-      error: 'GEMINI_API_KEY environment variable not set. Please configure it in Vercel project settings.'
+      error: 'BRAVE_API_KEY environment variable not set. Please configure it in Vercel project settings.'
     });
   }
 
-  // Map category IDs to display names
+  // Map category IDs to Brave News topics
   const categoryMap = {
-    1: 'Technology',
-    2: 'World',
-    3: 'Business',
-    4: 'Sports',
-    5: 'Science',
-    6: 'Entertainment',
+    1: 'technology news',
+    2: 'world news',
+    3: 'business news',
+    4: 'sports news',
+    5: 'science news',
+    6: 'entertainment news',
   };
 
-  const categoryName = categoryMap[category] || 'Technology';
-
-  const prompt = `Search for the top 3 most important ${categoryName} news stories from the last 24 hours. Return ONLY a valid JSON array with exactly 3 objects. No markdown, no explanation, just the raw JSON array.
-
-Each object must have these exact fields:
-- "headline": The article title (max 100 chars)
-- "summary": A 2-3 sentence AI-generated summary of the article
-- "source": The news source name (e.g., "Reuters", "TechCrunch", "BBC")
-- "url": The full article URL
-
-Return format:
-[{"headline": "...", "summary": "...", "source": "...", "url": "..."}, ...]`;
+  const topic = categoryMap[category] || 'technology news';
+  const url = `https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(topic)}&freshness=pd&count=20`;
 
   try {
-    const response = await fetch(`${GEMINI_API_BASE}?key=${apiKey}`, {
-      method: 'POST',
+    const response = await fetch(url, {
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Subscription-Token': apiKey,
       },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-        }
-      }),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('Gemini API error:', response.status, text);
-      return res.status(response.status).json({ error: 'Gemini API request failed', details: text });
+      console.error('Brave API error:', response.status, text);
+      return res.status(response.status).json({ error: 'Brave API request failed', details: text });
     }
 
     const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const results = data.results || [];
 
-    if (!rawText) {
-      console.error('No content in Gemini response:', JSON.stringify(data));
-      return res.status(500).json({ error: 'No content returned from Gemini' });
-    }
+    // Take up to 15 articles
+    const articles = results.slice(0, 15).map((item, i) => {
+      const description = item.description || '';
+      const teaser = description.substring(0, 120) + (description.length > 120 ? '...' : '');
+      const source = item.meta_url?.hostname?.replace(/^www\./, '') || item.source?.name || 'Brave';
 
-    // Parse the JSON response from Gemini
-    let articles;
-    try {
-      // Try to extract JSON if Gemini wraps it in markdown
-      let jsonStr = rawText.trim();
-      const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-      const rawArticles = JSON.parse(jsonStr);
-      
-      articles = rawArticles.slice(0, 3).map((item, i) => {
-        const description = item.summary || '';
-        const teaser = description.substring(0, 100) + (description.length > 100 ? '...' : '');
-        
-        return {
-          id: `g${category}${i + 1}`,
-          headline: item.headline,
-          teaser: teaser,
-          source: item.source || 'Unknown',
-          time: '24h',
-          url: item.url,
-          summary: description,
-        };
-      });
-    } catch (parseErr) {
-      console.error('Failed to parse Gemini response:', parseErr, 'Raw:', rawText);
-      return res.status(500).json({ error: 'Failed to parse Gemini response', message: parseErr.message });
-    }
+      return {
+        id: `b${category}${i + 1}`,
+        headline: item.title,
+        teaser: teaser,
+        source: source,
+        time: '24h',
+        url: item.url,
+        summary: `${description}\n\nSource: ${item.url}`,
+      };
+    });
 
     res.json(articles);
   } catch (err) {
