@@ -466,6 +466,7 @@ let newsPool = [];
 let poolIndex = 0;
 let isAnimating = false;
 let freshness = 100; // %
+let pillEls = {}; // catId → DOM element
 let refreshTime = Date.now(); // when bar was last reset
 
 const CATEGORY_COLORS = {
@@ -523,6 +524,7 @@ async function loadCategories() {
     pill.textContent = cat.emoji + ' ' + cat.name;
     pill.addEventListener('click', () => selectCategory(cat.id));
     pillsEl.appendChild(pill);
+    pillEls[cat.id] = pill;
   });
 }
 
@@ -532,10 +534,8 @@ async function selectCategory(catId) {
   isAnimating = true;
 
   // Update pill active state
-  document.querySelectorAll('.cat-pill').forEach(pill => {
-    pill.classList.toggle('active', pill.textContent.includes(
-      [{1:'Tech'},{2:'World'},{3:'Business'},{4:'Sports'},{5:'Science'}][catId-1][catId]
-    ));
+  Object.keys(pillEls).forEach(id => {
+    pillEls[id].classList.toggle('active', parseInt(id) === catId);
   });
 
   // Clear current cards
