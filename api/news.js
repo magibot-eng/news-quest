@@ -27,9 +27,12 @@ function getGenAI() {
 
 async function generateSummary(article) {
   const apiKey = process.env.GEMINI_API_KEY;
+  const rawDesc = article.description || article.snippet || '';
+  if (!rawDesc) return '';
+
   if (!apiKey) {
-    // No Gemini key — return the Brave description as fallback
-    return article.description || article.snippet || '';
+    // No Gemini key — rewrite the Brave description ourselves (make it punchy)
+    return rewriteSummary(rawDesc);
   }
 
   try {
@@ -39,17 +42,27 @@ async function generateSummary(article) {
       contents: [{
         role: 'user',
         parts: [{
-          text: `You are a news summarizer. Write 1-3 paragraphs summarizing this news article. Focus on the key facts and why this matters. Write in a clear, engaging style.\n\nTitle: ${article.title || article.headline || ''}\n\n${article.description || article.snippet || ''}`
+          text: `You are a sharp, witty news editor. Rewrite this article description into 1-3 punchy, engaging sentences that capture the key point and why it matters. Be direct, avoid filler.\n\nTitle: ${article.title || article.headline || ''}\n\nDescription: ${rawDesc}`
         }]
       }]
     });
 
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text || article.description || '';
+    const rewritten = text?.trim();
+    return rewritten || rawDesc;
   } catch (err) {
     console.error('Gemini summarization failed:', err.message);
-    return article.description || '';
+    return rewriteSummary(rawDesc);
   }
+}
+
+function rewriteSummary(raw) {
+  // Lightweight client-side rewrite: truncate to core, add punch if short
+  const s = raw.trim();
+  if (!s) return '';
+  // Strip trailing partial sentences
+  const truncated = s.length > 400 ? s.substring(0, 400).replace(/\s+\S*$/, '') + '...' : s;
+  return truncated;
 }
 
 module.exports = async (req, res) => {
