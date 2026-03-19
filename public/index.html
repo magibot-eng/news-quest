@@ -651,6 +651,10 @@
 </head>
 <body>
 
+<!-- DEBUG INFO -->
+<div id="debug-info" style="position:fixed;bottom:0;left:0;background:red;color:white;z-index:9999;font-size:14px;padding:4px 8px;display:block !important;"></div>
+<div id="debug-click" style="position:fixed;bottom:0;right:0;background:blue;color:white;z-index:9999;font-size:14px;padding:4px 8px;display:block !important;"></div>
+
 <!-- TOP BAR (shown on both screens) -->
 <div class="top-bar">
   <div class="game-title">📰 NEWS CLAW</div>
@@ -792,6 +796,10 @@ async function loadCategories() {
   const cats = await res.json();
   const gridEl = document.getElementById('categoryGrid');
   gridEl.innerHTML = '';
+
+  // Debug: show how many categories loaded
+  const debugEl = document.getElementById('debug-info');
+  if (debugEl) debugEl.textContent = `loadCategories: ${cats.length} categories loaded`;
 
   cats.forEach((cat, i) => {
     const card = document.createElement('div');
@@ -952,10 +960,15 @@ function renderCards(animate = true) {
       // clicks on cards that are still animating in (they fly/disappear mid-animation).
       card.addEventListener('animationend', () => {
         isAnimating = false;
+        const debugEl = document.getElementById('debug-click');
+        if (debugEl) debugEl.textContent = `Cards ready (${shownCards.length} cards)`;
       }, { once: true });
+      // Safety fallback: ensure isAnimating is false after 1.5s even if animationend missed
+      setTimeout(() => { isAnimating = false; }, 1500);
     } else {
       card.style.opacity = '1';
       card.style.transform = 'none';
+      isAnimating = false; // non-animated render means cards are immediately interactive
     }
   });
 
@@ -964,8 +977,14 @@ function renderCards(animate = true) {
 }
 
 function handleCardClick(cardEl, article) {
-  if (isAnimating) return;
+  if (isAnimating) {
+    const debugEl = document.getElementById('debug-click');
+    if (debugEl) debugEl.textContent = `CLICK BLOCKED (isAnimating=true)`;
+    return;
+  }
   isAnimating = true;
+  const debugEl = document.getElementById('debug-click');
+  if (debugEl) debugEl.textContent = `Card clicked: ${article.headline.substring(0, 30)}...`;
 
   const defaultColor = CATEGORY_COLORS[currentCategoryId];
   const cardColor = article.sourceCategoryColor || defaultColor;
