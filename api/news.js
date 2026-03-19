@@ -1,7 +1,9 @@
-// Using global fetch (Node 18+ built-in)
+// In-memory cache with 8-hour TTL
+const cache = new Map();
+
+const CACHE_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 module.exports = async (req, res) => {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -15,8 +17,16 @@ module.exports = async (req, res) => {
 
   if (!apiKey) {
     return res.status(500).json({
-      error: 'BRAVE_API_KEY environment variable not set. Please configure it in Vercel project settings.'
+      error: 'BRAVE_API_KEY environment variable not set.'
     });
+  }
+
+  // Check cache
+  const cacheKey = `news_${category}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    console.log(`Cache hit for category ${category}`);
+    return res.json(cached.data);
   }
 
   // Map category IDs to Brave News topics
@@ -27,7 +37,46 @@ module.exports = async (req, res) => {
     4: 'sports news',
     5: 'science news',
     6: 'entertainment news',
+    7: 'health news',
   };
+
+  // Category 8 = "I Feel Lucky" — fetch all 7 topics and combine
+  if (String(category) === '8') {
+    const allTopics = Object.values(categoryMap);
+    const results = [];
+    await Promise.all(allTopics.map(async (topic) => {
+      const u = `https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(topic)}&freshness=pd&count=20`;
+      try {
+        const r = await fetch(u, {
+          headers: { 'Accept': 'application/json', 'X-Subscription-Token': apiKey },
+        });
+        if (r.ok) {
+          const d = await r.json();
+          results.push(...(d.results || []));
+        }
+      } catch (_) {}
+    }));
+    // Shuffle combined results
+    for (let i = results.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [results[i], results[j]] = [results[j], results[i]];
+    }
+    const articles = results.slice(0, 15).map((item, i) => {
+      const description = item.description || '';
+      const source = item.meta_url?.hostname?.replace(/^www\./, '') || item.source?.name || 'Brave';
+      return {
+        id: `blucky${i + 1}`,
+        headline: item.title,
+        teaser: description.substring(0, 120) + (description.length > 120 ? '...' : ''),
+        source,
+        time: '24h',
+        url: item.url,
+        summary: `${description}\n\nSource: ${item.url}`,
+      };
+    });
+    cache.set(cacheKey, { data: articles, timestamp: Date.now() });
+    return res.json(articles);
+  }
 
   const topic = categoryMap[category] || 'technology news';
   const url = `https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(topic)}&freshness=pd&count=20`;
@@ -65,6 +114,10 @@ module.exports = async (req, res) => {
         summary: `${description}\n\nSource: ${item.url}`,
       };
     });
+
+    // Store in cache
+    cache.set(cacheKey, { data: articles, timestamp: Date.now() });
+    console.log(`Cached ${articles.length} articles for category ${category}`);
 
     res.json(articles);
   } catch (err) {

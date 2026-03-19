@@ -574,6 +574,42 @@
     transform: scale(1.04);
   }
 
+  /* ─── I FEEL LUCKY RAINBOW ─── */
+  .cat-card[data-cat-id="8"] {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff9f43 25%, #ffd700 50%, #2ecc71 75%, #00d4ff 100%) !important;
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,107,107,0.3) !important;
+    animation: luckyPulse 2.5s ease-in-out infinite !important;
+  }
+
+  .cat-card[data-cat-id="8"] .cat-card-name {
+    background: linear-gradient(90deg, #ff6b6b, #ff9f43, #ffd700, #2ecc71, #00d4ff, #9b59b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cat-card[data-cat-id="8"] .cat-card-desc {
+    color: rgba(255,255,255,0.85) !important;
+  }
+
+  @keyframes luckyPulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,107,107,0.3); }
+    50% { box-shadow: 0 0 50px rgba(255,215,0,0.9), 0 0 80px rgba(46,204,113,0.4); }
+  }
+
+  /* ─── CARD SHUFFLE ANIMATION ─── */
+  .card.shuffling {
+    animation: cardShuffle 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes cardShuffle {
+    0%   { opacity: 1; transform: scale(1) translateY(0); }
+    40%  { opacity: 0; transform: scale(0.88) translateY(-20px) rotateX(30deg); }
+    60%  { opacity: 0; transform: scale(0.88) translateY(10px) rotateX(-10deg); }
+    100% { opacity: 1; transform: scale(1) translateY(0) rotateX(0); }
+  }
+
   /* Mobile */
   @media (max-width: 700px) {
     .category-grid {
@@ -709,6 +745,8 @@ const CATEGORY_COLORS = {
   4: '#2ecc71', // Sports
   5: '#9b59b6', // Science
   6: '#e91e63', // Entertainment
+  7: '#00bfa5', // Health
+  8: '#ffd700', // I Feel Lucky
 };
 
 const CATEGORY_DESCS = {
@@ -718,6 +756,8 @@ const CATEGORY_DESCS = {
   4: 'Scores, trades, and athletic triumphs',
   5: 'Discoveries, medicine, and the cosmos',
   6: 'Movies, TV, music, and celebrity news',
+  7: 'Fitness, nutrition, and wellness',
+  8: 'Random news from all categories!',
 };
 
 // ─── SCREEN MANAGEMENT ────────────────────────────────────────────────────────
@@ -756,6 +796,7 @@ async function loadCategories() {
   cats.forEach((cat, i) => {
     const card = document.createElement('div');
     card.className = 'cat-card';
+    card.dataset.catId = cat.id;
     card.style.borderColor = cat.color;
     card.style.boxShadow = `0 0 18px ${cat.color}33`;
     card.style.animation = `catCardEntrance 0.5s cubic-bezier(0.22,1,0.36,1) forwards`;
@@ -849,6 +890,14 @@ function resetAndGoToSelect() {
   });
 }
 
+// ─── CARD SHUFFLING ───────────────────────────────────────────────────────────
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
 // ─── CARDS ────────────────────────────────────────────────────────────────────
 function showNextCards() {
   if (allReadTriggered) return;
@@ -861,13 +910,13 @@ function showNextCards() {
   if (shownCards.length === 0) return;
 
   const cardsEl = document.getElementById('cards');
-  // Only render if cards container is empty (avoid wiping on replenishment)
+  // Only render if cards container is empty (initial deal)
   if (cardsEl.children.length === 0) {
-    renderShownCards();
+    renderCards();
   }
 }
 
-function renderShownCards() {
+function renderCards(animate = true) {
   if (allReadTriggered) return;
 
   const cardsEl = document.getElementById('cards');
@@ -893,7 +942,12 @@ function renderShownCards() {
     card.onclick = () => handleCardClick(card, article);
     cardsEl.appendChild(card);
 
-    requestAnimationFrame(() => card.classList.add('dealt'));
+    if (animate) {
+      requestAnimationFrame(() => card.classList.add('dealt'));
+    } else {
+      card.style.opacity = '1';
+      card.style.transform = 'none';
+    }
   });
 
   isAnimating = false;
@@ -906,22 +960,14 @@ function handleCardClick(cardEl, article) {
   const color = CATEGORY_COLORS[currentCategoryId];
   const rect = cardEl.getBoundingClientRect();
 
-  // Dim OTHER cards immediately (they stay visible, just dimmed)
-  document.querySelectorAll('.card').forEach(c => {
-    if (c !== cardEl) {
-      c.style.transition = 'opacity 0.2s';
-      c.style.opacity = '0.15';
-    }
-  });
-
-  // Dim the hand area label
-  document.getElementById('handArea').classList.add('dimmed');
-
   // Fly this card to center
   cardEl.classList.add('flying');
 
+  // Dim the hand area label immediately
+  document.getElementById('handArea').classList.add('dimmed');
+
   setTimeout(() => {
-    // Dissolve ring
+    // Dissolve ring at card position
     const ring = document.createElement('div');
     ring.className = 'dissolve-ring';
     ring.style.left = (rect.left + rect.width / 2  - 40) + 'px';
@@ -933,78 +979,38 @@ function handleCardClick(cardEl, article) {
     document.body.appendChild(ring);
     setTimeout(() => ring.remove(), 700);
 
-    // Show summary
+    // ── RESHUFFLE LOGIC (Slay the Spire style) ──────────────────────
+    // 1. Remove picked card from shownCards
+    shownCards = shownCards.filter(a => a.id !== article.id);
+
+    // 2. Add 1 new card from pool (if available)
+    if (poolIndex < newsPool.length) {
+      shownCards.push(newsPool[poolIndex]);
+      poolIndex++;
+    }
+
+    // 3. Reshuffle ALL cards (Fisher-Yates) so B+C get new positions too
+    shuffleArray(shownCards);
+
+    // 4. Re-render all cards (3 fresh random cards)
+    renderCards(true);
+    // ─────────────────────────────────────────────────────────────────
+
+    // 5. Show summary for the picked article
     showSummary(article);
 
-    // Increment counter
+    // 6. Increment counter
     articlesRead++;
     document.getElementById('articlesReadCount').textContent = articlesRead;
 
-    // Remove picked card from shownCards and advance pool
-    shownCards = shownCards.filter(a => a !== article);
-    poolIndex++;
-
-    // Check end condition: no more cards shown AND no more articles in pool
+    // 7. Check end condition
     if (shownCards.length === 0 && poolIndex >= newsPool.length) {
       setTimeout(() => {
-        showEndScreen();
-        // isAnimating stays true until reset on next screen transition
-      }, 1200);
-    } else {
-      // Replenish: add next article from pool if we have fewer than 3 cards
-      setTimeout(() => {
-        if (!allReadTriggered) {
-          replenishCards();
-        }
-      }, 1200);
+        if (!allReadTriggered) showEndScreen();
+      }, 800);
     }
+
   }, 480);
-}
-
-function replenishCards() {
-  if (allReadTriggered) return;
-  isAnimating = true; // lock during replenishment to prevent double-click
-
-  const cardsEl = document.getElementById('cards');
-  const color = CATEGORY_COLORS[currentCategoryId];
-
-  // Restore opacity on remaining cards
-  document.querySelectorAll('.card').forEach(c => {
-    c.style.opacity = '';
-  });
-
-  // Add new cards until we have 3 or run out of pool
-  while (shownCards.length < 3 && poolIndex < newsPool.length) {
-    const newArticle = newsPool[poolIndex];
-    shownCards.push(newArticle);
-    poolIndex++;
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.borderColor = color;
-    card.style.boxShadow = `0 0 12px ${color}22`;
-    card.style.zIndex = 1 + shownCards.length;
-
-    card.innerHTML = `
-      <div class="card-headline">${newArticle.headline}</div>
-      <div class="card-meta">
-        <span>${newArticle.source}</span>
-        <span>${newArticle.time}</span>
-      </div>
-    `;
-
-    card.onclick = () => handleCardClick(card, newArticle);
-    cardsEl.appendChild(card);
-
-    requestAnimationFrame(() => card.classList.add('dealt'));
-  }
-
-  // If no cards left to show, clear the hand area label
-  if (shownCards.length === 0) {
-    cardsEl.innerHTML = '';
-  }
-
-  isAnimating = false;
 }
 
 // ─── END SCREEN ───────────────────────────────────────────────────────────────

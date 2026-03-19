@@ -14,6 +14,8 @@ module.exports = async (req, res) => {
     { id: 4, name: 'Sports', emoji: '⚽', color: '#2ecc71', desc: 'Scores, trades, and athletic triumphs' },
     { id: 5, name: 'Science', emoji: '🔬', color: '#9b59b6', desc: 'Discoveries, medicine, and the cosmos' },
     { id: 6, name: 'Entertainment', emoji: '🎬', color: '#e91e63', desc: 'Movies, TV, music, and celebrity news' },
+    { id: 7, name: 'Health', emoji: '🏥', color: '#00bfa5', desc: 'Fitness, nutrition, and wellness' },
+    { id: 8, name: 'I Feel Lucky', emoji: '🍀', color: '#ffd700', desc: 'Random news from all categories!' },
   ];
 
   res.json(categories);
