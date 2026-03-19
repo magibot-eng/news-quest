@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📰 NEWS QUEST</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f1a;
+    --card-bg: #1a1a2e;
+    --text: #e8e8e8;
+    --text-dim: #8888aa;
+    --hp-start: #ff4d4d;
+    --hp-end: #ffd700;
+    --accent: #ffd700;
+  }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 50% -10%, rgba(30, 30, 80, 0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 20% 80%, rgba(20, 20, 50, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(20, 20, 50, 0.4) 0%, transparent 50%);
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ─── TOP BAR ─── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  .game-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(255,215,0,0.3);
+    white-space: nowrap;
+  }
+
+  .refresh-hint {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* ─── CATEGORY PILLS ─── */
+  .category-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 14px 16px 10px;
+    flex-shrink: 0;
+  }
+
+  .cat-pill {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(0,0,0,0.3);
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+
+  .cat-pill.active {
+    opacity: 1;
+    box-shadow: 0 0 16px currentColor;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .cat-pill:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+
+  /* ─── MAIN AREA ─── */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 16px 0;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  /* ─── FRESHNESS BAR (BOSS HP) ─── */
+  .freshness-container {
+    width: 100%;
+    max-width: 480px;
+    flex-shrink: 0;
+  }
+
+  .freshness-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .freshness-track {
+    height: 16px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    position: relative;
+  }
+
+  .freshness-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--hp-start), var(--hp-end));
+    border-radius: 8px;
+    transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .freshness-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 60%);
+    border-radius: 8px;
+  }
+
+  .freshness-track:hover .freshness-fill {
+    filter: brightness(1.2);
+  }
+
+  /* ─── DIALOGUE BOX ─── */
+  .dialogue-box {
+    width: 100%;
+    max-width: 560px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    flex-shrink: 0;
+    min-height: 140px;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  .dialogue-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .dialogue-source {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dialogue-source a {
+    color: var(--accent);
+    text-decoration: none;
+    opacity: 0.9;
+  }
+
+  .dialogue-source a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .dialogue-time {
+    opacity: 0.5;
+  }
+
+  .dialogue-text {
+    font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+    line-height: 1.75;
+    color: var(--text);
+  }
+
+  .dialogue-text .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .dialogue-placeholder {
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 1rem;
+    padding: 30px 0;
+    opacity: 0.7;
+  }
+
+  /* ─── CARD HAND ─── */
+  .hand-area {
+    flex-shrink: 0;
+    padding: 14px 10px 28px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.65) 0%, transparent 80%);
+    width: 100%;
+  }
+
+  .hand-label {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    opacity: 0.6;
+  }
+
+  .cards {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 2px solid;
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: 170px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    opacity: 0;
+    transform: translateX(70px);
+    flex-shrink: 0;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .card-headline {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.35;
+    margin-bottom: 10px;
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .card:hover {
+    transform: translateY(-7px) scale(1.06);
+  }
+
+  /* Card entrance animation */
+  .card.dealt {
+    animation: dealCard 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes dealCard {
+    from { opacity: 0; transform: translateX(70px) scale(0.82) rotate(3deg); }
+    to   { opacity: 1; transform: translateX(0)   scale(1)    rotate(0deg); }
+  }
+
+  /* Card fly-to-center on click */
+  .card.flying {
+    animation: flyCenter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  @keyframes flyCenter {
+    0%   { transform: scale(1);    opacity: 1; }
+    50%  { transform: scale(1.35); opacity: 1; }
+    100% { transform: scale(0);    opacity: 0; }
+  }
+
+  /* Dissolve ring effect */
+  .dissolve-ring {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 200;
+    animation: dissolveRing 0.7s ease-out forwards;
+  }
+
+  @keyframes dissolveRing {
+    0%   { transform: scale(0); opacity: 0.8; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  /* Dialogue fade */
+  .dialogue-box.fade-out {
+    animation: fadeDialogueOut 0.3s ease forwards;
+  }
+  .dialogue-box.fade-in {
+    animation: fadeDialogueIn 0.4s ease forwards;
+  }
+
+  @keyframes fadeDialogueOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-6px); }
+  }
+  @keyframes fadeDialogueIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Freshness pulse on tap */
+  .freshness-fill.pulse {
+    animation: freshPulse 0.5s ease;
+  }
+  @keyframes freshPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(2.2); }
+  }
+
+  /* Loading shimmer on cards */
+  .card.loading {
+    animation: shimmer 1.2s ease infinite;
+  }
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .card {
+      width: 148px;
+      padding: 12px 13px;
+    }
+    .cards { gap: 8px; }
+    .dialogue-box { padding: 16px 18px; max-height: 180px; }
+    .top-bar { padding: 12px 16px; }
+    .game-title { font-size: 1.1rem; letter-spacing: 2px; }
+  }
+
+  @media (max-width: 480px) {
+    .card {
+      width: 100%;
+      max-width: 280px;
+    }
+    .cards { flex-direction: column; align-items: center; }
+  }
+
+  /* Scrollbar styling */
+  .dialogue-box::-webkit-scrollbar { width: 4px; }
+  .dialogue-box::-webkit-scrollbar-track { background: transparent; }
+  .dialogue-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="game-title">📰 NEWS QUEST</div>
+  <div class="refresh-hint">TAP BAR TO REFRESH</div>
+</div>
+
+<!-- CATEGORY PILLS -->
+<div class="category-pills" id="categoryPills"></div>
+
+<!-- MAIN AREA -->
+<div class="main-area">
+
+  <!-- FRESHNESS BAR -->
+  <div class="freshness-container">
+    <div class="freshness-label">
+      <span>📰 NEWS FRESHNESS</span>
+      <span id="freshnessPct">100%</span>
+    </div>
+    <div class="freshness-track" id="freshnessTrack" title="Click to refresh">
+      <div class="freshness-fill" id="freshnessFill" style="width: 100%"></div>
+    </div>
+  </div>
+
+  <!-- DIALOGUE BOX -->
+  <div class="dialogue-box" id="dialogueBox">
+    <div class="dialogue-placeholder" id="dialoguePlaceholder">
+      Pick a card to read the latest news...
+    </div>
+    <div id="dialogueContent" style="display:none;">
+      <div class="dialogue-source" id="dialogueSource"></div>
+      <div class="dialogue-text" id="dialogueText"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CARD HAND -->
+<div class="hand-area">
+  <div class="hand-label">— CHOOSE YOUR CARD —</div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let selectedCategory = 1;
+let newsPool = [];
+let poolIndex = 0;
+let isAnimating = false;
+let freshness = 100; // %
+let refreshTime = Date.now(); // when bar was last reset
+
+const CATEGORY_COLORS = {
+  1: '#00d4ff', // Tech
+  2: '#ff6b6b', // World
+  3: '#ffd700', // Business
+  4: '#2ecc71', // Sports
+  5: '#9b59b6', // Science
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await loadCategories();
+  await selectCategory(1);
+  startFreshnessTimer();
+}
+
+// ─── FRESHNESS TIMER ─────────────────────────────────────────────────────────
+// Freshness depletes from 100% → 0% over 24 hours (linear for MVP)
+function startFreshnessTimer() {
+  refreshTime = Date.now();
+  const depleteInterval = setInterval(() => {
+    const elapsed = Date.now() - refreshTime;
+    const total = 24 * 60 * 60 * 1000; // 24h in ms
+    freshness = Math.max(0, Math.round(100 - (elapsed / total) * 100));
+    document.getElementById('freshnessFill').style.width = freshness + '%';
+    document.getElementById('freshnessPct').textContent = freshness + '%';
+  }, 60000); // update every minute
+  window._freshnessInterval = depleteInterval;
+}
+
+// Reset freshness bar (simulate refresh)
+function resetFreshness() {
+  freshness = 100;
+  refreshTime = Date.now();
+  const fill = document.getElementById('freshnessFill');
+  fill.classList.add('pulse');
+  setTimeout(() => fill.classList.remove('pulse'), 500);
+  document.getElementById('freshnessFill').style.width = '100%';
+  document.getElementById('freshnessPct').textContent = '100%';
+}
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+async function loadCategories() {
+  const res = await fetch('/api/categories');
+  const cats = await res.json();
+  const pillsEl = document.getElementById('categoryPills');
+  pillsEl.innerHTML = '';
+
+  cats.forEach(cat => {
+    const pill = document.createElement('button');
+    pill.className = 'cat-pill' + (cat.id === selectedCategory ? ' active' : '');
+    pill.style.borderColor = cat.color;
+    pill.style.color = cat.color;
+    pill.textContent = cat.emoji + ' ' + cat.name;
+    pill.addEventListener('click', () => selectCategory(cat.id));
+    pillsEl.appendChild(pill);
+  });
+}
+
+async function selectCategory(catId) {
+  if (isAnimating) return;
+  selectedCategory = catId;
+  isAnimating = true;
+
+  // Update pill active state
+  document.querySelectorAll('.cat-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.textContent.includes(
+      [{1:'Tech'},{2:'World'},{3:'Business'},{4:'Sports'},{5:'Science'}][catId-1][catId]
+    ));
+  });
+
+  // Clear current cards
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = '';
+  clearDialogue();
+
+  // Fetch news
+  try {
+    const res = await fetch(`/api/news/${catId}`);
+    newsPool = await res.json();
+    poolIndex = 0;
+  } catch(e) {
+    console.error('Failed to load news', e);
+    isAnimating = false;
+    return;
+  }
+
+  isAnimating = false;
+  showNextCards();
+}
+
+// ─── CARDS ────────────────────────────────────────────────────────────────────
+function showNextCards() {
+  const cardsEl = document.getElementById('cards');
+  const batch = newsPool.slice(poolIndex, poolIndex + 3);
+  if (batch.length === 0) return;
+
+  cardsEl.innerHTML = '';
+
+  batch.forEach((article, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.borderColor = CATEGORY_COLORS[selectedCategory];
+    card.style.boxShadow = `0 0 12px ${CATEGORY_COLORS[selectedCategory]}22`;
+    card.style.animationDelay = `${i * 130 + 100}ms`;
+
+    card.innerHTML = `
+      <div class="card-headline">${article.headline}</div>
+      <div class="card-meta">
+        <span>${article.source}</span>
+        <span>${article.time}</span>
+      </div>
+    `;
+
+    card.addEventListener('click', () => handleCardClick(card, article));
+    cardsEl.appendChild(card);
+
+    requestAnimationFrame(() => card.classList.add('dealt'));
+  });
+}
+
+function handleCardClick(cardEl, article) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  const color = CATEGORY_COLORS[selectedCategory];
+  const rect = cardEl.getBoundingClientRect();
+
+  // Dismiss other cards
+  document.querySelectorAll('.card').forEach(c => {
+    if (c !== cardEl) {
+      c.style.transition = 'opacity 0.2s, transform 0.2s';
+      c.style.opacity = '0';
+      c.style.transform = 'scale(0.75)';
+    }
+  });
+
+  // Fly card to center
+  cardEl.classList.add('flying');
+
+  setTimeout(() => {
+    // Dissolve ring
+    const ring = document.createElement('div');
+    ring.className = 'dissolve-ring';
+    ring.style.left = (rect.left + rect.width / 2  - 40) + 'px';
+    ring.style.top  = (rect.top  + rect.height / 2 - 40) + 'px';
+    ring.style.width  = '80px';
+    ring.style.height = '80px';
+    ring.style.border = `3px solid ${color}`;
+    ring.style.boxShadow = `0 0 25px ${color}`;
+    document.body.appendChild(ring);
+    setTimeout(() => ring.remove(), 700);
+
+    // Show summary
+    showSummary(article);
+    isAnimating = false;
+    poolIndex += 3;
+
+    // Load next cards after short delay
+    setTimeout(() => {
+      if (poolIndex >= newsPool.length) {
+        selectCategory(selectedCategory); // re-fetch when pool exhausted
+      } else {
+        showNextCards();
+      }
+    }, 1200);
+  }, 480);
+}
+
+// ─── DIALOGUE ─────────────────────────────────────────────────────────────────
+async function showSummary(article) {
+  const dialogueBox = document.getElementById('dialogueBox');
+  const placeholder = document.getElementById('dialoguePlaceholder');
+  const content = document.getElementById('dialogueContent');
+  const sourceEl = document.getElementById('dialogueSource');
+  const textEl = document.getElementById('dialogueText');
+
+  // Fade out
+  dialogueBox.classList.add('fade-out');
+  await sleep(280);
+
+  placeholder.style.display = 'none';
+  content.style.display = 'block';
+
+  sourceEl.innerHTML = `
+    <span style="color: ${CATEGORY_COLORS[selectedCategory]}">${article.source}</span>
+    &nbsp;·&nbsp; <span class="dialogue-time">${article.time}</span>
+    &nbsp;·&nbsp; <a href="${article.url}" target="_blank" rel="noopener">Read Full Article →</a>
+  `;
+
+  // Fade in
+  dialogueBox.classList.remove('fade-out');
+  dialogueBox.classList.add('fade-in');
+
+  // Typewriter text
+  const summaryRes = await fetch(`/api/summary/${article.id}`);
+  const summaryData = await summaryRes.json();
+  await typewriterEffect(textEl, summaryData.summary);
+
+  await sleep(100);
+  dialogueBox.classList.remove('fade-in');
+}
+
+async function typewriterEffect(el, text) {
+  el.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+
+  // Parse \n into <br> during typing
+  const segments = text.split('\n');
+
+  for (let s = 0; s < segments.length; s++) {
+    const chars = segments[s].split('');
+    for (let i = 0; i < chars.length; i++) {
+      // Insert before cursor
+      el.insertBefore(document.createTextNode(chars[i]), cursor);
+      await sleep(14 + Math.random() * 8);
+    }
+    if (s < segments.length - 1) {
+      el.insertBefore(document.createElement('br'), cursor);
+      el.insertBefore(document.createElement('br'), cursor);
+      await sleep(60);
+    }
+  }
+
+  // Remove cursor when done
+  await sleep(600);
+  cursor.remove();
+}
+
+function clearDialogue() {
+  const placeholder = document.getElementById('dialoguePlaceholder');
+  const content = document.getElementById('dialogueContent');
+  const dialogueBox = document.getElementById('dialogueBox');
+  const textEl = document.getElementById('dialogueText');
+
+  placeholder.style.display = '';
+  content.style.display = 'none';
+  textEl.innerHTML = '';
+  dialogueBox.classList.remove('fade-in', 'fade-out');
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── REFRESH ──────────────────────────────────────────────────────────────────
+document.getElementById('freshnessTrack').addEventListener('click', async () => {
+  resetFreshness();
+  await selectCategory(selectedCategory);
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
