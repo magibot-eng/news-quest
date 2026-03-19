@@ -684,6 +684,13 @@
 </div>
 
 <script>
+// ─── API CONFIG ───────────────────────────────────────────────────────────────
+// Detect environment: local dev server vs Vercel/production
+const IS_LOCAL = window.location.hostname === 'localhost' && window.location.port === '3457';
+const API_BASE = IS_LOCAL ? 'http://localhost:3457' : '';
+// Local Express uses /api/news/:catId; Vercel proxy uses /api/news?category=:catId
+const NEWS_ENDPOINT = IS_LOCAL ? `${API_BASE}/api/news` : `${API_BASE}/api/news`;
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let articlesRead = 0;
 let selectedCategory = null;
@@ -781,7 +788,7 @@ async function enterCategory(catId, catName, catColor) {
 
   // Update category header
   const headerName = document.getElementById('catHeaderName');
-  headerName.textContent = cat.emoji + ' ' + catName;
+  headerName.textContent = catName;
   headerName.style.color = catColor;
 
   // Clear cards and dialogue
@@ -794,7 +801,10 @@ async function enterCategory(catId, catName, catColor) {
 
   // Fetch news
   try {
-    const res = await fetch(`/api/news/${catId}`);
+    const newsUrl = IS_LOCAL
+      ? `${API_BASE}/api/news/${catId}`
+      : `${API_BASE}/api/news?category=${catId}`;
+    const res = await fetch(newsUrl);
     newsPool = await res.json();
     poolIndex = 0;
   } catch(e) {
@@ -965,10 +975,11 @@ async function showSummary(article) {
   content.style.display = 'block';
 
   const color = CATEGORY_COLORS[currentCategoryId];
+  const articleUrl = article.url || `https://example.com/${article.id}`;
   sourceEl.innerHTML = `
     <span style="color: ${color}">${article.source}</span>
     &nbsp;·&nbsp; <span class="dialogue-time">${article.time}</span>
-    &nbsp;·&nbsp; <a href="${article.url}" target="_blank" rel="noopener">Read Full Article →</a>
+    &nbsp;·&nbsp; <a href="${articleUrl}" target="_blank" rel="noopener">Read Full Article →</a>
   `;
 
   // Fade in
@@ -976,14 +987,20 @@ async function showSummary(article) {
   dialogueBox.classList.add('fade-in');
 
   let summaryData;
-  try {
-    const res = await fetch(`/api/summary/${article.id}`);
-    summaryData = await res.json();
-  } catch(e) {
-    textEl.innerHTML = '<em>Failed to load summary. Click a card to try again.</em>';
-    dialogueBox.classList.remove('fade-in');
-    isAnimating = false;
-    return;
+
+  // Brave API embeds summary in article.summary; mock data fetches from /api/summary/:id
+  if (article.summary) {
+    summaryData = { summary: article.summary };
+  } else {
+    try {
+      const res = await fetch(`${API_BASE}/api/summary/${article.id}`);
+      summaryData = await res.json();
+    } catch(e) {
+      textEl.innerHTML = '<em>Failed to load summary. Click a card to try again.</em>';
+      dialogueBox.classList.remove('fade-in');
+      isAnimating = false;
+      return;
+    }
   }
 
   await typewriterEffect(textEl, summaryData.summary);
