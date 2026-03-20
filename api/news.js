@@ -14,29 +14,17 @@ const CATEGORY_COLORS = {
   8: '#ffd700', // I Feel Lucky
 };
 
-// ── Gemini LLM Summarization ──────────────────────────────────────────────────
-let genAI = null;
-function getGenAI() {
-  if (!genAI) {
-    // Dynamic import to avoid errors when GEMINI_API_KEY is not set
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return genAI;
-}
-
+// ── Gemini LLM Summarization via REST API ──────────────────────────────────────
 async function generateSummary(article) {
   const apiKey = process.env.GEMINI_API_KEY;
   const rawDesc = article.description || article.snippet || '';
   if (!rawDesc) return '';
 
   if (!apiKey) {
-    // No Gemini key — rewrite the Brave description ourselves (make it punchy)
     return rewriteSummary(rawDesc);
   }
 
   try {
-    const ai = getGenAI();
     const prompt = `You are a news editor. Write a detailed summary (2-4 paragraphs) covering:
 1. What happened (the main facts)
 2. Why it matters (the significance)
@@ -48,28 +36,42 @@ Title: ${article.title || article.headline || ''}
 ${rawDesc}
 
 Summary:`;
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
-    });
 
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    const rewritten = text?.trim();
-    return rewritten || rawDesc;
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 512, temperature: 0.7 }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini API error:', response.status, errText);
+      return rewriteSummary(rawDesc);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text?.trim() || rewriteSummary(rawDesc);
   } catch (err) {
-    console.error('Gemini summarization failed:', err.message);
+    console.error('Gemini fetch failed:', err.message);
     return rewriteSummary(rawDesc);
   }
 }
 
 function rewriteSummary(raw) {
-  // Fallback: expand the Brave description into a more substantive paragraph
   const s = raw.trim();
   if (!s) return '';
-  // If it's short, just return as-is; if long, clean up the trailing word
+  // If short, return as-is; if long, clean up trailing word
   return s.length > 600 ? s.substring(0, 600).replace(/\s+\S*$/, '') + '...' : s;
 }
 
+// ── Main handler ──────────────────────────────────────────────────────────────
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -83,9 +85,7 @@ module.exports = async (req, res) => {
   const apiKey = process.env.BRAVE_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({
-      error: 'BRAVE_API_KEY environment variable not set.'
-    });
+    return res.status(500).json({ error: 'BRAVE_API_KEY environment variable not set.' });
   }
 
   // Check cache
@@ -96,7 +96,6 @@ module.exports = async (req, res) => {
     return res.json(cached.data);
   }
 
-  // Map category IDs to Brave News topics
   const categoryMap = {
     1: 'technology news',
     2: 'world news',
@@ -107,8 +106,8 @@ module.exports = async (req, res) => {
     7: 'health news',
   };
 
-  // Category 8 = "I Feel Lucky" — fetch all 7 topics and combine
   if (String(category) === '8') {
+    // I Feel Lucky — fetch all 7 topics
     const results = [];
     for (const [catId, topic] of Object.entries(categoryMap)) {
       const u = `https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(topic)}&freshness=pd&count=20`;
@@ -124,7 +123,6 @@ module.exports = async (req, res) => {
         }
       } catch (_) {}
     }
-    // Shuffle combined results
     for (let i = results.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [results[i], results[j]] = [results[j], results[i]];
@@ -146,7 +144,6 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Generate LLM summaries in parallel
     const summarizedArticles = await Promise.all(
       articles.map(async (article) => {
         const summary = await generateSummary(article);
@@ -178,7 +175,6 @@ module.exports = async (req, res) => {
     const data = await response.json();
     const results = data.results || [];
 
-    // Take up to 15 articles
     const articles = results.slice(0, 15).map((item, i) => {
       const description = item.description || '';
       const teaser = description.substring(0, 120) + (description.length > 120 ? '...' : '');
@@ -197,7 +193,6 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Generate LLM summaries in parallel
     const summarizedArticles = await Promise.all(
       articles.map(async (article) => {
         const summary = await generateSummary(article);
@@ -205,7 +200,6 @@ module.exports = async (req, res) => {
       })
     );
 
-    // Store in cache
     cache.set(cacheKey, { data: summarizedArticles, timestamp: Date.now() });
     console.log(`Cached ${summarizedArticles.length} articles for category ${category}`);
 

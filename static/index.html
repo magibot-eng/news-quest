@@ -905,8 +905,9 @@ function handleCardClick(cardEl, article) {
   // Advance
   poolIndex += 3;
 
-  if (poolIndex >= newsPool.length) {
-    setTimeout(() => showEndScreen(), 600);
+  // Check if ALL articles have been read
+  if (articlesRead >= newsPool.length) {
+    setTimeout(() => showEndScreen(), 800);
   } else {
     setTimeout(() => {
       if (!allReadTriggered) showNextCards();
