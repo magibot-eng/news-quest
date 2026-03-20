@@ -1,14 +1,11 @@
 {
-  "rewrites": [
-    { "source": "/api/news", "destination": "/api/news" },
-    { "source": "/api/categories", "destination": "/api/categories" }
+  "version": 2,
+  "builds": [
+    { "src": "static/**", "use": "@vercel/static" },
+    { "src": "api/**/*.js", "use": "@vercel/node" }
   ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
-      ]
-    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/static/$1" }
   ]
 }
