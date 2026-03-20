@@ -687,7 +687,7 @@
 // ─── API CONFIG ───────────────────────────────────────────────────────────────
 // Detect environment: local dev server vs Vercel/production
 const IS_LOCAL = window.location.hostname === 'localhost' && window.location.port === '3457';
-const API_BASE = IS_LOCAL ? 'http://localhost:3457' : '';
+const API_BASE = IS_LOCAL ? 'http://localhost:3457' : 'https://newsclaw-api.vercel.app';
 // Local Express uses /api/news/:catId; Vercel proxy uses /api/news?category=:catId
 const NEWS_ENDPOINT = IS_LOCAL ? `${API_BASE}/api/news` : `${API_BASE}/api/news`;
 
@@ -747,7 +747,7 @@ async function init() {
 
 // ─── CATEGORIES ───────────────────────────────────────────────────────────────
 async function loadCategories() {
-  const res = await fetch('/api/categories');
+  const res = await fetch(`${API_BASE}/api/categories`);
   const cats = await res.json();
   const gridEl = document.getElementById('categoryGrid');
   gridEl.innerHTML = '';
