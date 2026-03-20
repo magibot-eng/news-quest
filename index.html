@@ -698,7 +698,6 @@ let currentCategoryId = null;
 let currentCategoryName = null;
 let newsPool = [];
 let poolIndex = 0;
-let isAnimating = false;
 let allReadTriggered = false; // guard against double-triggering end screen
 
 const CATEGORY_COLORS = {
@@ -780,7 +779,6 @@ async function enterCategory(catId, catName, catColor) {
   selectedCategory = catId;
   newsPool = [];
   poolIndex = 0;
-  isAnimating = false;
   allReadTriggered = false;
 
   // Update counter
@@ -817,7 +815,6 @@ async function enterCategory(catId, catName, catColor) {
 
 // ─── BACK BUTTON ──────────────────────────────────────────────────────────────
 document.getElementById('backBtn').addEventListener('click', () => {
-  if (isAnimating) return;
   resetAndGoToSelect();
 });
 
@@ -832,7 +829,6 @@ function resetAndGoToSelect() {
   currentCategoryName = null;
   newsPool = [];
   poolIndex = 0;
-  isAnimating = false;
   allReadTriggered = false;
   clearDialogue();
   hideEndScreen();
@@ -873,76 +869,51 @@ function showNextCards() {
       </div>
     `;
 
-    // Use onclick directly for reliable event binding
     card.onclick = () => handleCardClick(card, article);
     cardsEl.appendChild(card);
 
     requestAnimationFrame(() => card.classList.add('dealt'));
   });
-
-  isAnimating = false;
 }
 
 function handleCardClick(cardEl, article) {
-  if (isAnimating) return;
-  isAnimating = true;
-
-  const color = CATEGORY_COLORS[currentCategoryId];
-  const rect = cardEl.getBoundingClientRect();
-
-  // Dim OTHER cards immediately
-  document.querySelectorAll('.card').forEach(c => {
-    if (c !== cardEl) {
-      c.style.transition = 'opacity 0.2s';
-      c.style.opacity = '0.15';
-    }
-  });
-
-  // Dim the hand area label
-  document.getElementById('handArea').classList.add('dimmed');
-
-  // Fly this card to center
+  // Stop entrance animation
+  cardEl.classList.remove('dealt');
   cardEl.classList.add('flying');
 
-  setTimeout(() => {
-    // Dissolve ring
-    const ring = document.createElement('div');
-    ring.className = 'dissolve-ring';
-    ring.style.left = (rect.left + rect.width / 2  - 40) + 'px';
-    ring.style.top  = (rect.top  + rect.height / 2 - 40) + 'px';
-    ring.style.width  = '80px';
-    ring.style.height = '80px';
-    ring.style.border = `3px solid ${color}`;
-    ring.style.boxShadow = `0 0 25px ${color}`;
-    document.body.appendChild(ring);
-    setTimeout(() => ring.remove(), 700);
+  // Create dissolve ring
+  const rect = cardEl.getBoundingClientRect();
+  const color = CATEGORY_COLORS[currentCategoryId];
+  const ring = document.createElement('div');
+  ring.className = 'dissolve-ring';
+  ring.style.left = (rect.left + rect.width / 2  - 40) + 'px';
+  ring.style.top  = (rect.top  + rect.height / 2 - 40) + 'px';
+  ring.style.width  = '80px';
+  ring.style.height = '80px';
+  ring.style.border = `3px solid ${color}`;
+  ring.style.boxShadow = `0 0 25px ${color}`;
+  document.body.appendChild(ring);
+  setTimeout(() => ring.remove(), 700);
 
-    // Show summary (don't await - let it run in background)
-    showSummary(article);
+  // Show summary
+  showSummary(article);
 
-    // Increment counter
-    articlesRead++;
-    document.getElementById('articlesReadCount').textContent = articlesRead;
+  // Update counter
+  articlesRead++;
+  document.getElementById('articlesReadCount').textContent = articlesRead;
 
-    poolIndex += 3;
+  // Advance
+  poolIndex += 3;
 
-    // Check if ALL articles in this category are now exhausted
-    if (poolIndex >= newsPool.length) {
-      setTimeout(() => {
-        showEndScreen();
-        isAnimating = false;
-      }, 800);
-    } else {
-      // Load next cards after short delay
-      setTimeout(() => {
-        if (!allReadTriggered) {
-          showNextCards();
-        }
-        isAnimating = false;
-      }, 800);
-    }
-  }, 480);
+  if (poolIndex >= newsPool.length) {
+    setTimeout(() => showEndScreen(), 600);
+  } else {
+    setTimeout(() => {
+      if (!allReadTriggered) showNextCards();
+    }, 600);
+  }
 }
+
 
 // ─── END SCREEN ───────────────────────────────────────────────────────────────
 function showEndScreen() {
@@ -997,8 +968,7 @@ async function showSummary(article) {
     } catch(e) {
       textEl.innerHTML = '<em>Failed to load summary. Click a card to try again.</em>';
       dialogueBox.classList.remove('fade-in');
-      isAnimating = false;
-      return;
+        return;
     }
   }
 
